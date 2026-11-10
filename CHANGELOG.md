@@ -11,6 +11,7 @@ All notable changes to the **OpenSource Clipping** project will be documented in
 ## [v1.15.]
 
 ### Fixed
+- **Face detection crash (MediaPipe)**: Switched the face model from `blaze_face_full_range` to `blaze_face_short_range`. The MediaPipe Tasks FaceDetector does not support the full-range model and failed every clip with `TensorsToDetectionsCalculator ... (raw_box_tensor->shape().dims[1])==(num_boxes_)`.
 - **Gemini model names**: Default model changed from `gemini-3-flash-preview` (404 on API v1) to `gemini-3.8-flash`, and fallback from `gemini-2.5-flash` (closed to new users) to the `gemini-flash-latest` alias.
 - **Transcription hang on Kaggle**: Audio is now extracted with the FFmpeg CLI into a numpy array before Faster-Whisper runs, instead of letting PyAV decode the video inside the worker thread (which could stall silently at "Mendekode audio" with CPU/GPU at 0%). FFmpeg errors now fail the job with a clear message.
 - **Kaggle ngrok startup**: Use a full HTTP upstream URL and select HTTPS options for pyngrok's v3 Endpoints or legacy v2 Tunnels API. This prevents pyngrok 9 from constructing `http://localhost:127.0.0.1:8000`, preserves older supported SDKs, and rejects non-HTTPS public URLs.

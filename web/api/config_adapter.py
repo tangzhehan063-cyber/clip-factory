@@ -136,7 +136,7 @@ def build_config_from_payload(
             os.path.join(base_dir, NAMA_FONT_THUMBNAIL)
         ),
         file_mediapipe_model=os.path.abspath(
-            os.path.join(base_dir, "blaze_face_full_range.tflite")
+            os.path.join(base_dir, "blaze_face_short_range.tflite")
         ),
         # YOLO configs
         face_detector=face_detector,
