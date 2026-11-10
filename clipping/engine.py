@@ -5,6 +5,7 @@ Maps to Cell 2 (The Engine) of the notebook.
 """
 
 import json
+import subprocess
 import os
 import re
 import time
@@ -358,6 +359,27 @@ def parse_youtube_json3_subs(json_path: str, max_words_per_subtitle: int = 5) ->
         return "", []
 
 
+def _extract_audio_ffmpeg(video_path: str, sampling_rate: int = 16000):
+    """Decode audio to a mono float32 numpy array via the FFmpeg CLI.
+
+    faster-whisper's default decoder (PyAV) can deadlock silently when it runs
+    inside the web worker thread (seen on Kaggle: CPU/GPU at 0%, no output).
+    Running FFmpeg as a subprocess avoids PyAV entirely and fails loudly.
+    """
+    import numpy as np
+
+    cmd = [
+        "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+        "-i", video_path, "-vn", "-ac", "1", "-ar", str(sampling_rate),
+        "-f", "s16le", "-acodec", "pcm_s16le", "-",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, timeout=1800)
+    if proc.returncode != 0 or not proc.stdout:
+        err = proc.stderr.decode("utf-8", "replace")[-500:]
+        raise RuntimeError(f"FFmpeg gagal mengekstrak audio: {err}")
+    return np.frombuffer(proc.stdout, np.int16).astype(np.float32) / 32768.0
+
+
 def transcribe_video(
     video_path: str,
     max_words_per_subtitle: int = 5,
@@ -403,8 +425,13 @@ def transcribe_video(
         )
         model = WhisperModel(model_size, device=device, compute_type=compute_type)
 
-    print("      ⏳ Mendekode audio & mengekstrak fitur (belum ada output)...", flush=True)
-    segments, info = model.transcribe(video_path, beam_size=5, word_timestamps=True)
+    print("      ⏳ Mengekstrak audio dengan FFmpeg...", flush=True)
+    audio = _extract_audio_ffmpeg(video_path)
+    print(
+        f"      ✅ Audio siap ({len(audio) / 16000:.0f} detik). Mulai transkripsi...",
+        flush=True,
+    )
+    segments, info = model.transcribe(audio, beam_size=5, word_timestamps=True)
 
     transkrip_lengkap = ""
     data_segmen: list[dict] = []
