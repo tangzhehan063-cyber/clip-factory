@@ -108,10 +108,19 @@ def runtime_environment(env_dir: Path) -> dict[str, str]:
     return environment
 
 
+MANAGED_PYTHON_VERSION = "3.12"
+
+
+def host_python_supported() -> bool:
+    return (3, 10) <= sys.version_info[:2] <= (3, 12)
+
+
 def validate_platform() -> None:
-    """Reject unsupported Python/wheel platforms before any installation."""
-    if not (3, 10) <= sys.version_info[:2] <= (3, 12):
-        raise RuntimeError("Kaggle Studio requires Python 3.10-3.12; select a Python 3.12 runtime.")
+    """Reject unsupported wheel platforms before any installation.
+
+    A host Python outside 3.10-3.12 (e.g. Kaggle's 3.13 image) is handled by
+    creating the isolated environment from a uv-managed Python 3.12 instead.
+    """
     if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
         raise RuntimeError("This bootstrap targets Linux x86_64 Kaggle/Colab runtimes.")
 
@@ -215,6 +224,27 @@ def ensure_pip(env_dir: Path, root: Path = PROJECT_ROOT) -> None:
     subprocess.run(command, cwd=root, env=environment, timeout=30, check=True)
 
 
+def create_uv_environment(env_dir: Path, root: Path = PROJECT_ROOT) -> None:
+    """Build the venv from a standalone Python 3.12 when the host is unsupported."""
+    print(f"Host Python {sys.version_info.major}.{sys.version_info.minor} is unsupported; "
+          f"downloading a standalone Python {MANAGED_PYTHON_VERSION} via uv...", flush=True)
+    uv = shutil.which("uv")
+    if uv is None:
+        tools_dir = env_dir.parent / "uv-tool"
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "--target", str(tools_dir), "uv",
+             "--index-url", "https://pypi.org/simple"],
+            cwd=root, check=True,
+        )
+        uv = str(tools_dir / "bin" / "uv")
+    environment = dict(os.environ, UV_PYTHON_INSTALL_DIR=str(env_dir.parent / "uv-python"))
+    subprocess.run([uv, "python", "install", MANAGED_PYTHON_VERSION], cwd=root, env=environment, check=True)
+    subprocess.run(
+        [uv, "venv", "--python", MANAGED_PYTHON_VERSION, "--seed", "--managed-python", str(env_dir)],
+        cwd=root, env=environment, check=True,
+    )
+
+
 def setup_environment(env_dir: Path, root: Path = PROJECT_ROOT) -> None:
     """Install only into an isolated venv; any failed command stops setup."""
     with logged_stage("platform_validation"):
@@ -222,7 +252,10 @@ def setup_environment(env_dir: Path, root: Path = PROJECT_ROOT) -> None:
     with logged_stage("venv"):
         if not env_dir.exists():
             print("Creating isolated Kaggle Studio environment...", flush=True)
-            venv.EnvBuilder(with_pip=False, system_site_packages=False).create(env_dir)
+            if host_python_supported():
+                venv.EnvBuilder(with_pip=False, system_site_packages=False).create(env_dir)
+            else:
+                create_uv_environment(env_dir, root)
         validate_environment(env_dir)
     with logged_stage("pip_bootstrap"):
         ensure_pip(env_dir, root)

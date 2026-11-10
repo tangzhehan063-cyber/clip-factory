@@ -249,6 +249,7 @@ def test_new_environment_does_not_call_ensurepip(monkeypatch, tmp_path):
     env_dir = tmp_path / "venv"
     calls = []
     monkeypatch.setattr(bootstrap, "validate_platform", lambda: None)
+    monkeypatch.setattr(bootstrap, "host_python_supported", lambda: True)
     def builder(**options):
         assert options == {"with_pip": False, "system_site_packages": False}
         return SimpleNamespace(create=lambda path: (calls.append("create"), make_environment(tmp_path)))
@@ -373,3 +374,18 @@ def test_missing_or_blank_ngrok_token_stops_before_launch(monkeypatch, tmp_path,
     monkeypatch.setattr(bootstrap.subprocess, "Popen", lambda *a, **k: pytest.fail("Must not launch"))
     with pytest.raises(RuntimeError, match="Attach the secret with this exact label"):
         bootstrap.start_server(env_dir)
+
+
+def test_unsupported_host_python_uses_uv_environment(monkeypatch, tmp_path):
+    env_dir = tmp_path / "venv"
+    calls = []
+    monkeypatch.setattr(bootstrap, "validate_platform", lambda: None)
+    monkeypatch.setattr(bootstrap, "host_python_supported", lambda: False)
+    monkeypatch.setattr(bootstrap.venv, "EnvBuilder", lambda **k: pytest.fail("Host venv must not be used"))
+    monkeypatch.setattr(bootstrap, "create_uv_environment",
+                        lambda *a: (calls.append("uv"), make_environment(tmp_path)))
+    monkeypatch.setattr(bootstrap, "ensure_pip", lambda *a: calls.append("pip"))
+    monkeypatch.setattr(bootstrap.subprocess, "run", lambda *a, **k: calls.append("install"))
+    monkeypatch.setattr(bootstrap, "install_deno", lambda *a: calls.append("deno"))
+    bootstrap.setup_environment(env_dir, tmp_path)
+    assert calls == ["uv", "pip", "install", "install", "install", "deno"]
