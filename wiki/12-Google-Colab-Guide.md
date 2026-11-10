@@ -39,7 +39,7 @@ URL_YOUTUBE = "https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
 JUMLAH_CLIP = 7
 RASIO = "9:16"
 FONT_STYLE = "DEFAULT"
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_MODEL = "gemini-3.8-flash"
 
 !python main.py \
   --url "{URL_YOUTUBE}" \

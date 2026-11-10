@@ -114,7 +114,7 @@ class JobCreateRequest(BaseModel):
 
     # AI
     ai_provider: AIProvider = AIProvider.GEMINI
-    gemini_model: str = "gemini-3-flash-preview"
+    gemini_model: str = "gemini-3.8-flash"
     face_detector: FaceDetector = FaceDetector.MEDIAPIPE
     load_gemini_json: bool = False
 

@@ -218,7 +218,7 @@ def build_config_from_payload(
         ai_provider=ai_provider,
         api_key_nvidia=env.get("NVIDIA_API_KEY", os.environ.get("NVIDIA_API_KEY", "")),
         nvidia_model=payload.get("nvidia_model", "deepseek-ai/deepseek-v4-pro"),
-        gemini_model=payload.get("gemini_model", "gemini-3-flash-preview"),
+        gemini_model=payload.get("gemini_model", "gemini-3.8-flash"),
         gemini_fallback_model=payload.get("gemini_fallback_model", GEMINI_FALLBACK_MODEL),
         load_gemini_json=payload.get("load_gemini_json", False),
         # Tracking Tuning (use defaults for web GUI)

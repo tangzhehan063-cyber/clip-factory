@@ -11,6 +11,7 @@ All notable changes to the **OpenSource Clipping** project will be documented in
 ## [v1.15.]
 
 ### Fixed
+- **Gemini model names**: Default model changed from `gemini-3-flash-preview` (404 on API v1) to `gemini-3.8-flash`, and fallback from `gemini-2.5-flash` (closed to new users) to the `gemini-flash-latest` alias.
 - **Transcription hang on Kaggle**: Audio is now extracted with the FFmpeg CLI into a numpy array before Faster-Whisper runs, instead of letting PyAV decode the video inside the worker thread (which could stall silently at "Mendekode audio" with CPU/GPU at 0%). FFmpeg errors now fail the job with a clear message.
 - **Kaggle ngrok startup**: Use a full HTTP upstream URL and select HTTPS options for pyngrok's v3 Endpoints or legacy v2 Tunnels API. This prevents pyngrok 9 from constructing `http://localhost:127.0.0.1:8000`, preserves older supported SDKs, and rejects non-HTTPS public URLs.
 - **Tunnel failure diagnostics**: Preserve safe HTTP status, ngrok/agent error codes, and SDK version in flow logs without response bodies or secrets. Cleanup failures no longer hide the original tunnel rejection. Added offline regression tests using the real SDK request builder.
